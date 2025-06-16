@@ -1,0 +1,59 @@
+{
+  "name": "voice-orb-visualizer",
+  "version": "1.0.0",
+  "description": "Organic audio blob visualizer for conversational UIs",
+  "main": "dist/voice-orb.cjs",
+  "module": "dist/voice-orb.mjs",
+  "browser": "dist/voice-orb.iife.js",
+  "types": "dist/voice-orb.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/voice-orb.mjs",
+      "require": "./dist/voice-orb.cjs",
+      "script": "./dist/voice-orb.iife.js",
+      "types": "./dist/voice-orb.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "serve": "python3 -m http.server 8000",
+    "dev:serve": "npm run build && npm run serve",
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "audio",
+    "visualization",
+    "voice",
+    "orb",
+    "blob",
+    "canvas",
+    "web-audio",
+    "conversational-ui"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@types/node": "^20.11.19",
+    "rollup": "^4.12.0",
+    "rollup-plugin-dts": "^6.1.0",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.3.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/voice-orb-visualizer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/voice-orb-visualizer/issues"
+  },
+  "homepage": "https://github.com/yourusername/voice-orb-visualizer#readme"
+}

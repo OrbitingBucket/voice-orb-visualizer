@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Orb Visualizer - Basic Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #2563eb;
+            margin-bottom: 30px;
+        }
+
+        #orb-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        #orb {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(37, 99, 235, 0.1), transparent);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            color: #9ca3af;
+            margin: 10px 0;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .options {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .option-group label {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        input[type="range"] {
+            width: 100px;
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Voice Orb Visualizer</h1>
+    
+    <div id="orb-container">
+        <canvas id="orb"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="micBtn">Start Microphone</button>
+        <button id="testBtn">Test Mode</button>
+        <button id="assistantBtn">Assistant Mode</button>
+        <button id="audioTestBtn">Test Audio File</button>
+        <button id="stopBtn">Stop</button>
+    </div>
+
+    <div class="status" id="status">Ready</div>
+
+    <div class="options">
+        <div class="option-group">
+            <label for="radius">Radius</label>
+            <input type="range" id="radius" min="50" max="200" value="100">
+            <span id="radiusValue">100</span>
+        </div>
+        
+        <div class="option-group">
+            <label for="color">Color</label>
+            <input type="color" id="color" value="#2563eb">
+        </div>
+        
+        <div class="option-group">
+            <label for="sensitivity">Sensitivity</label>
+            <input type="range" id="sensitivity" min="0.01" max="0.2" step="0.01" value="0.05">
+            <span id="sensitivityValue">0.05</span>
+        </div>
+        
+        <div class="option-group">
+            <label for="pointCount">Point Count</label>
+            <input type="range" id="pointCount" min="12" max="48" value="24">
+            <span id="pointCountValue">24</span>
+        </div>
+        
+        <div class="checkbox-group">
+            <input type="checkbox" id="debug">
+            <label for="debug">Debug Mode</label>
+        </div>
+    </div>
+
+    <script type="module">
+        import { VoiceOrb, checkBrowserSupport } from '../dist/voice-orb.mjs';
+
+        // Check browser support
+        const support = checkBrowserSupport();
+        if (!support.supported) {
+            document.getElementById('status').textContent = `Unsupported browser. Missing: ${support.missing.join(', ')}`;
+            document.getElementById('status').classList.add('error');
+        }
+
+        // Initialize orb
+        const orb = new VoiceOrb('#orb', {
+            radius: 100,
+            color: '#2563eb',
+            debug: false,
+            onCalibrated: (baseline, gain) => {
+                updateStatus(`Calibrated! Baseline: ${baseline.toFixed(3)}, Gain: ${gain.toFixed(2)}`);
+            },
+            onError: (error) => {
+                updateStatus(`Error: ${error.message}`, true);
+            },
+            onModeChange: (mode) => {
+                updateStatus(`Mode: ${mode}`);
+                updateButtonStates(mode);
+            },
+            onVolume: (volume) => {
+                // You can use this for custom volume indicators
+            }
+        });
+
+        // UI Elements
+        const micBtn = document.getElementById('micBtn');
+        const testBtn = document.getElementById('testBtn');
+        const assistantBtn = document.getElementById('assistantBtn');
+        const audioTestBtn = document.getElementById('audioTestBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+
+        // Control buttons
+        micBtn.addEventListener('click', async () => {
+            try {
+                micBtn.disabled = true;
+                updateStatus('Requesting microphone access...');
+                await orb.startMicrophone();
+            } catch (error) {
+                updateStatus(`Failed to start microphone: ${error.message}`, true);
+            } finally {
+                micBtn.disabled = false;
+            }
+        });
+
+        testBtn.addEventListener('click', () => {
+            orb.startTest();
+        });
+
+        assistantBtn.addEventListener('click', async () => {
+            try {
+                assistantBtn.disabled = true;
+                updateStatus('Initializing assistant mode...');
+                await orb.startAssistant();
+            } catch (error) {
+                updateStatus(`Failed to start assistant mode: ${error.message}`, true);
+            } finally {
+                assistantBtn.disabled = false;
+            }
+        });
+
+        audioTestBtn.addEventListener('click', async () => {
+            try {
+                audioTestBtn.disabled = true;
+                updateStatus('Starting assistant mode and loading audio...');
+                
+                // First start assistant mode
+                await orb.startAssistant();
+                
+                // Create audio element and connect it
+                const audio = new Audio('./audio.mp3');
+                audio.loop = true; // Loop for continuous testing
+                
+                // Connect audio to orb
+                if (orb.connectAudio(audio)) {
+                    updateStatus('Playing test audio (looped)');
+                    await audio.play();
+                } else {
+                    updateStatus('Failed to connect audio', true);
+                }
+            } catch (error) {
+                updateStatus(`Audio test failed: ${error.message}`, true);
+            } finally {
+                audioTestBtn.disabled = false;
+            }
+        });
+
+        stopBtn.addEventListener('click', async () => {
+            stopBtn.disabled = true;
+            updateStatus('Stopping...');
+            await orb.stop();
+            stopBtn.disabled = false;
+        });
+
+        // Option controls
+        const radiusSlider = document.getElementById('radius');
+        const radiusValue = document.getElementById('radiusValue');
+        radiusSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            radiusValue.textContent = value;
+            orb.setOptions({ radius: value });
+        });
+
+        const colorPicker = document.getElementById('color');
+        colorPicker.addEventListener('change', (e) => {
+            orb.setOptions({ color: e.target.value });
+        });
+
+        const sensitivitySlider = document.getElementById('sensitivity');
+        const sensitivityValue = document.getElementById('sensitivityValue');
+        sensitivitySlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            sensitivityValue.textContent = value.toFixed(2);
+            orb.setOptions({ sensitivity: value });
+        });
+
+        const pointCountSlider = document.getElementById('pointCount');
+        const pointCountValue = document.getElementById('pointCountValue');
+        pointCountSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            pointCountValue.textContent = value;
+            orb.setOptions({ pointCount: value });
+        });
+
+        const debugCheckbox = document.getElementById('debug');
+        debugCheckbox.addEventListener('change', (e) => {
+            orb.setOptions({ debug: e.target.checked });
+        });
+
+        // Helper functions
+        function updateStatus(message, isError = false) {
+            status.textContent = message;
+            status.classList.toggle('error', isError);
+        }
+
+        function updateButtonStates(mode) {
+            const buttons = [micBtn, testBtn, assistantBtn, audioTestBtn, stopBtn];
+            buttons.forEach(btn => btn.disabled = false);
+            
+            if (mode === 'microphone') {
+                micBtn.disabled = true;
+            } else if (mode === 'test') {
+                testBtn.disabled = true;
+            } else if (mode === 'assistant') {
+                assistantBtn.disabled = true;
+                audioTestBtn.disabled = true; // Both assistant buttons disabled when in assistant mode
+            } else if (mode === 'stopped') {
+                stopBtn.disabled = true;
+            }
+        }
+
+        // Initial button state
+        updateButtonStates('stopped');
+
+        // Test assistant mode with sample audio
+        window.testAssistantAudio = () => {
+            // You can test with a sample audio file
+            const audio = new Audio('path/to/your/audio.mp3');
+            orb.connectAudio(audio);
+            audio.play();
+        };
+    </script>
+</body>
+</html>

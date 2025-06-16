@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Orb Library Test</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #0a0a0a; 
+            color: white; 
+            font-family: monospace;
+        }
+        canvas { 
+            border: 1px solid #333; 
+            display: block; 
+            margin: 20px auto; 
+        }
+        .controls { 
+            text-align: center; 
+            margin: 20px; 
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 20px; 
+            background: #2563eb; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Voice Orb Library Test</h1>
+    <canvas id="orb" width="400" height="400"></canvas>
+    
+    <div class="controls">
+        <button id="test">Test Mode</button>
+        <button id="mic">Microphone</button>
+        <button id="stop">Stop</button>
+    </div>
+    
+    <div id="status">Ready</div>
+
+    <script type="module">
+        // Test importing the library
+        import { VoiceOrb, checkBrowserSupport } from './dist/voice-orb.mjs';
+        
+        console.log('Library loaded successfully!');
+        
+        // Check browser support
+        const support = checkBrowserSupport();
+        console.log('Browser support:', support);
+        
+        // Create orb instance
+        const orb = new VoiceOrb('#orb', {
+            color: '#2563eb',
+            debug: true,
+            onModeChange: (mode) => {
+                document.getElementById('status').textContent = `Mode: ${mode}`;
+            },
+            onError: (error) => {
+                document.getElementById('status').textContent = `Error: ${error.message}`;
+                document.getElementById('status').style.color = 'red';
+            }
+        });
+        
+        console.log('Orb created successfully!');
+        
+        // Set up buttons
+        document.getElementById('test').onclick = () => orb.startTest();
+        document.getElementById('mic').onclick = async () => {
+            try {
+                await orb.startMicrophone();
+            } catch (error) {
+                console.error('Mic error:', error);
+            }
+        };
+        document.getElementById('stop').onclick = () => orb.stop();
+        
+        console.log('Test setup complete!');
+    </script>
+</body>
+</html>

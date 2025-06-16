@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Orb - Audio Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #0a0a0a;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #2563eb;
+            margin-bottom: 30px;
+        }
+
+        #orb-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        #orb {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(37, 99, 235, 0.1), transparent);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            color: #9ca3af;
+            margin: 10px 0;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .info {
+            max-width: 600px;
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+        }
+
+        .info h3 {
+            color: #2563eb;
+            margin-top: 0;
+        }
+
+        audio {
+            margin: 10px 0;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Voice Orb - Audio File Test</h1>
+    
+    <div class="info">
+        <h3>Audio File Testing</h3>
+        <p>This page tests the orb with an actual audio file (audio.mp3). 
+        The orb should react to the audio in real-time, just like it would with microphone input.</p>
+        <p><strong>Click "Play Audio Test" to start!</strong></p>
+    </div>
+    
+    <div id="orb-container">
+        <canvas id="orb"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="playBtn">Play Audio Test</button>
+        <button id="stopBtn">Stop</button>
+        <button id="debugBtn">Toggle Debug</button>
+    </div>
+
+    <div class="status" id="status">Ready - Click "Play Audio Test" to start</div>
+
+    <!-- Hidden audio element for manual control -->
+    <audio id="testAudio" controls style="margin-top: 20px;">
+        <source src="./audio.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script type="module">
+        import { VoiceOrb, checkBrowserSupport } from '../dist/voice-orb.mjs';
+
+        // Check browser support
+        const support = checkBrowserSupport();
+        if (!support.supported) {
+            document.getElementById('status').textContent = `Unsupported browser. Missing: ${support.missing.join(', ')}`;
+            document.getElementById('status').classList.add('error');
+        }
+
+        // Helper functions (define first)
+        function updateStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.classList.toggle('error', isError);
+        }
+
+        // Initialize orb with debug enabled
+        const orb = new VoiceOrb('#orb', {
+            radius: 120,
+            color: '#2563eb',
+            debug: true,
+            pointCount: 32,
+            sensitivity: 0.03, // Lower sensitivity for audio files
+            onModeChange: (mode) => {
+                updateStatus(`Mode: ${mode}`);
+            },
+            onError: (error) => {
+                updateStatus(`Error: ${error.message}`, true);
+            }
+        });
+
+        // UI Elements
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const debugBtn = document.getElementById('debugBtn');
+        const status = document.getElementById('status');
+        const testAudio = document.getElementById('testAudio');
+
+        let isDebugMode = true;
+
+        // Play button handler
+        playBtn.addEventListener('click', async () => {
+            try {
+                playBtn.disabled = true;
+                updateStatus('Initializing assistant mode...');
+                
+                // Start assistant mode
+                await orb.startAssistant();
+                
+                // Create and setup audio
+                const audio = new Audio('./audio.mp3');
+                audio.loop = true;
+                audio.volume = 0.7;
+                
+                // Connect to orb
+                if (orb.connectAudio(audio)) {
+                    updateStatus('Playing test audio...');
+                    await audio.play();
+                    
+                    // Update button states
+                    playBtn.style.display = 'none';
+                    stopBtn.style.display = 'inline-block';
+                } else {
+                    throw new Error('Failed to connect audio to visualizer');
+                }
+                
+            } catch (error) {
+                updateStatus(`Failed to start audio test: ${error.message}`, true);
+                playBtn.disabled = false;
+            }
+        });
+
+        // Stop button handler
+        stopBtn.addEventListener('click', async () => {
+            stopBtn.disabled = true;
+            updateStatus('Stopping...');
+            
+            // Stop all audio
+            testAudio.pause();
+            testAudio.currentTime = 0;
+            
+            await orb.stop();
+            
+            // Reset UI
+            playBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            playBtn.disabled = false;
+            stopBtn.disabled = false;
+            
+            updateStatus('Stopped');
+        });
+
+        // Debug toggle
+        debugBtn.addEventListener('click', () => {
+            isDebugMode = !isDebugMode;
+            orb.setOptions({ debug: isDebugMode });
+            debugBtn.textContent = isDebugMode ? 'Hide Debug' : 'Show Debug';
+        });
+
+
+        // Initial state
+        stopBtn.style.display = 'none';
+        debugBtn.textContent = 'Hide Debug';
+        
+        console.log('Audio test page loaded. Audio file: ./audio.mp3');
+    </script>
+</body>
+</html>
